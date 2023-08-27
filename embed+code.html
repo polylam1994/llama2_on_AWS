@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Llama2 Chatbot</title>
+    <style>
+      /* Add your custom CSS styles here */
+      #chatbot-container {
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+        background-color: #f2f2f2;
+        padding: 1rem;
+        border-radius: 10px;
+      }
+      #chatbot-messages {
+        height: 500px;
+        overflow-y: scroll;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        background-color: #fff;
+      }
+      #error-message {
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chatbot-container">
+      <div id="chatbot-messages"></div>
+      <form id="chatbot-form">
+        <input type="text" id="user-input" placeholder="Input here" />
+        <button type="submit">Send</button>
+        <p id="error-message" style="color: red; display: none"></p>
+      </form>
+    </div>
+
+    <script>
+      async function fetchLlama2Response(message) {
+        // Debugging: Check the input message
+        console.log("Input message:", message);
+
+        const response = await fetch(
+          "https://o136qhwmr4.execute-api.us-east-1.amazonaws.com/prod/complete-chat",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              messages: [
+                { role: "system", content: "You are a helpful assistant." },
+                { role: "user", content: message },
+              ],
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          return data.assistant;
+        } else {
+          console.error(`API error: ${response.status} ${response.statusText}`);
+          throw new Error(
+            "An error occurred while fetching the chatbot response."
+          );
+        }
+      }
+
+      document
+        .getElementById("chatbot-form")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const userInput = document.getElementById("user-input").value.trim();
+          const chatbotMessages = document.getElementById("chatbot-messages");
+          const submitButton = document.querySelector("button[type='submit']");
+          const errorMessage = document.getElementById("error-message");
+
+          if (userInput === "") {
+            errorMessage.textContent = "Please input words";
+            errorMessage.style.display = "block";
+            return;
+          } else {
+            errorMessage.textContent = "";
+            errorMessage.style.display = "none";
+          }
+
+          // Disable the button and input field while waiting for the response
+          submitButton.disabled = true;
+          document.getElementById("user-input").disabled = true;
+
+          chatbotMessages.innerHTML += `<div>Me: ${userInput}</div>`;
+          try {
+            const chatbotResponse = await fetchLlama2Response(userInput);
+            chatbotMessages.innerHTML += `<div>LLaMA2: ${chatbotResponse}</div>`;
+          } catch (error) {
+            chatbotMessages.innerHTML += `<div>Error: ${error.message}</div>`;
+          } finally {
+            // Enable the button and input field after receiving the response
+            submitButton.disabled = false;
+            document.getElementById("user-input").disabled = false;
+            document.getElementById("user-input").value = "";
+          }
+        });
+    </script>
+  </body>
+</html>
